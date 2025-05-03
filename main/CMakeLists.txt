@@ -1,5 +1,5 @@
 set(srcs 
-    "i2c_eeprom_main.c" 
+    "i2c_ht16k33_main.c" 
     )
 
 set(includes 
