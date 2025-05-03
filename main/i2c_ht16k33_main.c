@@ -22,103 +22,106 @@
 #define SCL_IO_PIN CONFIG_I2C_MASTER_SCL
 #define SDA_IO_PIN CONFIG_I2C_MASTER_SDA
 #define MASTER_FREQUENCY CONFIG_I2C_MASTER_FREQUENCY
-#define PORT_NUMBER -1
-#define LENGTH 48
 
 #define TAG "MAIN"
 #include "esp_log.h"
 
-// static void i2c_init(i2c_ht16k33_handle_t *ht16k33_handle){
+static void i2c_init(i2c_ht16k33_handle_t *ht16k33_handle){
+    printf("I2C_INIT\n");
+    // I2C declare new master bus
+    i2c_master_bus_handle_t bus_handle;
+    i2c_master_bus_config_t i2c_mst_config = {
+        .clk_source = I2C_CLK_SRC_RC_FAST,
+        .i2c_port   = I2C_NUM_0,
+        .sda_io_num = 22, // SDA_IO_PIN
+        .scl_io_num = 23, // SCL_IO_PIN
+        .glitch_ignore_cnt = 7,
+        .flags.enable_internal_pullup = false,
+    };
+    ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_mst_config, &bus_handle));
 
-//     i2c_master_bus_handle_t bus_handle;
+    // Init ht16k33 device
+    ESP_ERROR_CHECK(i2c_ht16k33_init(bus_handle, 0x70, ht16k33_handle));
 
-//     i2c_master_bus_config_t i2c_bus_config = {
-//         .clk_source = I2C_CLK_SRC_DEFAULT,
-//         .i2c_port = PORT_NUMBER,
-//         .scl_io_num = SCL_IO_PIN,
-//         .sda_io_num = SDA_IO_PIN,
-//         .glitch_ignore_cnt = 7,
-//     };
+    // Config ht16k33: Turn on System oscillator
+    uint32_t address = 0x21;
+    uint8_t  data    = 0x0;
+    ESP_ERROR_CHECK(i2c_ht16k33_write(*ht16k33_handle, address, &data, 0));
 
-//     ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_bus_config, &bus_handle));
+    // Config ht16k33: ROW/INT default
+    // Config ht16k33: Dimming default
+    address = 0xE0; // | (uint8_t) brigthness
+    ESP_ERROR_CHECK(i2c_ht16k33_write(*ht16k33_handle, address, &data, 0));
 
-//     i2c_ht16k33_config_t ht16k33_config = {
-//         .ht16k33_device.scl_speed_hz = MASTER_FREQUENCY,
-//         .ht16k33_device.device_address = 0xE0,
-//         .addr_wordlen = 1,
-//         .write_time_ms = 10,
-//     };
+    // Config ht16k33: Blinking default + display on
+    address = 0x81;
+    ESP_ERROR_CHECK(i2c_ht16k33_write(*ht16k33_handle, address, &data, 0));
 
-//     ESP_ERROR_CHECK(i2c_ht16k33_init(bus_handle, &ht16k33_config, ht16k33_handle));
+    // Display something
+    address = 0x00;
+    uint8_t wdata[16];
+    wdata[0]  = 0x3F;
 
-// }
+    // Exterieur
+    // lsb -> A0 - A1
+    //        A1 - A2
+    //        A2 - B
+    //        A3 - C
+    //        A4 - D1
+    //        A5 - D2
+    //        A6 - E
+    // msb -> A7 - F
+
+    wdata[1]  = 0x4A; // Interieur
+
+    // lsb -> A8  - G1
+    //        A9  - G2
+    //        A10 - H
+    //        A11 - J
+    //        A12 - K
+    //        A13 - L
+    //        A14 - M
+    // msb -> A15 - N
+
+    wdata[2]  = 0xC3;
+    wdata[3]  = 0x01;
+
+
+    wdata[4]  = 0;
+    wdata[5]  = 0;
+    wdata[6]  = 0;
+    wdata[7]  = 0;
+    wdata[8]  = 0;
+    wdata[9]  = 0;
+    wdata[10] = 0;
+    wdata[11] = 0;
+    wdata[12] = 0;
+    wdata[13] = 0;
+    wdata[14] = 0;
+    wdata[15] = 0;
+    ESP_ERROR_CHECK(i2c_ht16k33_write(*ht16k33_handle, address, wdata, 16));
+
+    // address = 0x20;
+    // ESP_ERROR_CHECK(i2c_ht16k33_read(*ht16k33_handle, address, &data, 1));
+    // printf("Read 0x%02lx = 0x%02x \n", address, data);
+}
 
 void app_main(void)
 {
     // Init var
-    // i2c_ht16k33_handle_t ht16k33_handle;
-    // uint8_t  read_buf[1];
-    // uint32_t block_addr = 0x40;
-
-    printf("SCL_IO_PIN: %d \n",SCL_IO_PIN);
-    printf("SDA_IO_PIN: %d \n",SDA_IO_PIN);
-    printf("MASTER_FREQUENCY: %d \n",MASTER_FREQUENCY);
+    i2c_ht16k33_handle_t ht16k33_handle;
+    // uint8_t  read_buf[1]  = {0};
+    // uint8_t  write_buf[1] = {0};
+    // uint32_t block_addr = 0x00;
 
     // Watchdog cfg
     // esp_task_wdt_deinit();
 
     // I2C init
-    // i2c_init(&ht16k33_handle);
+    i2c_init(&ht16k33_handle);
 
-    i2c_master_bus_handle_t bus_handle;
-    i2c_master_bus_config_t i2c_mst_config = {
-        .clk_source = I2C_CLK_SRC_RC_FAST,
-        .i2c_port   = I2C_NUM_0,
-        .sda_io_num = 22,
-        .scl_io_num = 23,
-        .glitch_ignore_cnt = 7,
-        // .intr_priority = 3,
-        // .trans_queue_depth = 0,
-        // .flags.enable_internal_pullup = true,
-    };
-
-    ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_mst_config, &bus_handle));
-
-    i2c_device_config_t dev_cfg = {
-        .dev_addr_length = I2C_ADDR_BIT_LEN_7,
-        .device_address = 0xE0,
-        .scl_speed_hz = 100000,
-    };
-    i2c_master_dev_handle_t dev_handle;
-    ESP_ERROR_CHECK(i2c_master_bus_add_device(bus_handle, &dev_cfg, &dev_handle));
-
-
-    printf("toto1\n");
-
-    // while(true){
-    //     i2c_master_probe(bus_handle, 0xE0, 100);
-    // }
-    // printf("toto2\n");
-
-
-    //     i2c_master_probe(bus_handle, 0xE0, 100);
-    // }
-
-    if (i2c_master_probe(bus_handle, 0x70, 100) != ESP_ERR_NOT_FOUND)
-    {
-        ESP_LOGI(TAG, "Found I2C-Device @ 0x%02X", 0xE0);
-    }
-    ESP_ERROR_CHECK(i2c_del_master_bus(bus_handle));
     printf("Hello world, human!\n");
-
-    // for (uint8_t i = 1; i < 128; i++)
-    // {
-    //     if (i2c_master_probe(bus_handle, i, 100) != ESP_ERR_NOT_FOUND)
-    //     {
-    //         ESP_LOGI(TAG, "Found I2C-Device @ 0x%02X", i);
-    //     }
-    // }
-
+    // ESP_ERROR_CHECK(i2c_del_master_bus(bus_handle));
 
     // Forever loop
     // while (1) {
@@ -129,10 +132,20 @@ void app_main(void)
 
         // i2c_master_receive(&bus_handle, read_buf, 1, 100);
 
-        // printf("0\n");
+        // read_buf[0] = 0;
         // ESP_ERROR_CHECK(i2c_ht16k33_read(ht16k33_handle, block_addr, read_buf, 1));
-        // printf("1");
-    //     printf("%02x\n ", read_buf[0]);
+        // printf("Read1 0x%02x\n ", read_buf[0]);
+        // i2c_ht16k33_wait_idle(ht16k33_handle);
+
+        // write_buf[0] = 3;
+        // ESP_ERROR_CHECK(i2c_ht16k33_write(ht16k33_handle,block_addr, write_buf, 1));
+
+        // // i2c_ht16k33_wait_idle(ht16k33_handle);
+
+        // printf("Read1 0x%02x\n ", read_buf[0]);
+        // ESP_ERROR_CHECK(i2c_ht16k33_read(ht16k33_handle, block_addr, read_buf, 1));
+        // printf("Read2 0x%02x\n ", read_buf[0]);
+
     //     vTaskDelay(50);
     // }
 

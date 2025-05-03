@@ -16,12 +16,12 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-#define I2C_HT16K33_MAX_TRANS_UNIT (48)
+#define I2C_HT16K33_MAX_TRANS_UNIT (48+1) // +1 for address
 // Different HT16K33 device might share one I2C bus
 
 static const char TAG[] = "i2c-ht16k33";
 
-esp_err_t i2c_ht16k33_init(i2c_master_bus_handle_t bus_handle, const i2c_ht16k33_config_t *ht16k33_config, i2c_ht16k33_handle_t *ht16k33_handle)
+esp_err_t i2c_ht16k33_init(i2c_master_bus_handle_t bus_handle, uint16_t device_address, i2c_ht16k33_handle_t *ht16k33_handle)
 {
     esp_err_t ret = ESP_OK;
     i2c_ht16k33_handle_t out_handle;
@@ -30,19 +30,19 @@ esp_err_t i2c_ht16k33_init(i2c_master_bus_handle_t bus_handle, const i2c_ht16k33
 
     i2c_device_config_t i2c_dev_conf = {
         .dev_addr_length = I2C_ADDR_BIT_LEN_7,
-        .device_address  = ht16k33_config->ht16k33_device.device_address,
-        .scl_speed_hz    = ht16k33_config->ht16k33_device.scl_speed_hz,
+        .device_address = device_address,
+        .scl_speed_hz = 100000,
     };
 
     if (out_handle->i2c_dev == NULL) {
         ESP_GOTO_ON_ERROR(i2c_master_bus_add_device(bus_handle, &i2c_dev_conf, &out_handle->i2c_dev), err, TAG, "i2c new bus failed");
     }
 
-    out_handle->buffer = (uint8_t*)calloc(1, ht16k33_config->addr_wordlen + I2C_HT16K33_MAX_TRANS_UNIT);
+    out_handle->buffer = (uint8_t*)calloc(1, I2C_HT16K33_MAX_TRANS_UNIT);
     ESP_GOTO_ON_FALSE(out_handle->buffer, ESP_ERR_NO_MEM, err, TAG, "no memory for i2c ht16k33 device buffer");
 
-    out_handle->addr_wordlen = ht16k33_config->addr_wordlen;
-    out_handle->write_time_ms = ht16k33_config->write_time_ms;
+    out_handle->addr_wordlen  = 1;
+    out_handle->write_time_ms = 10;
     *ht16k33_handle = out_handle;
 
     return ret;

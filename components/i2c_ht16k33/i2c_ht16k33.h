@@ -11,12 +11,6 @@
 extern "C" {
 #endif
 
-typedef struct {
-    i2c_device_config_t ht16k33_device; /*!< Configuration for eeprom device */
-    uint8_t addr_wordlen;               /*!< block address wordlen */
-    uint8_t write_time_ms;              /*!< eeprom write time, typically 10ms*/
-} i2c_ht16k33_config_t;
-
 struct i2c_ht16k33_t {
     i2c_master_dev_handle_t i2c_dev;      /*!< I2C device handle */
     uint8_t addr_wordlen;                 /*!< block address wordlen */
@@ -37,7 +31,7 @@ typedef struct i2c_ht16k33_t *i2c_ht16k33_handle_t;
  * @param[out] eeprom_handle Handle of EEPROM
  * @return ESP_OK: Init success. ESP_FAIL: Not success.
  */
-esp_err_t i2c_ht16k33_init(i2c_master_bus_handle_t bus_handle, const i2c_ht16k33_config_t *ht16k33_config, i2c_ht16k33_handle_t *ht16k33_handle);
+esp_err_t i2c_ht16k33_init(i2c_master_bus_handle_t bus_handle, uint16_t device_address, i2c_ht16k33_handle_t *ht16k33_handle);
 
 /**
  * @brief Write data to ht16k33
