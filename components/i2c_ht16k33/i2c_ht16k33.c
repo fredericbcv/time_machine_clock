@@ -81,3 +81,32 @@ void i2c_ht16k33_wait_idle(i2c_ht16k33_handle_t ht16k33_handle)
     // This is time for HT16K33 Self-Timed Write Cycle
     vTaskDelay(pdMS_TO_TICKS(ht16k33_handle->write_time_ms));
 }
+
+esp_err_t i2c_ht16k33_set_brightness(i2c_ht16k33_handle_t ht16k33_handle, uint8_t brigthness){
+    uint8_t data = 0x0;
+    return i2c_ht16k33_write(ht16k33_handle, (0xE0 | (brigthness & 0xF)), &data, 0);
+}
+
+esp_err_t i2c_ht16k33_set_blinking(i2c_ht16k33_handle_t ht16k33_handle, blink_type_t blink_type){
+    uint8_t data = 0x0;
+    return i2c_ht16k33_write(ht16k33_handle, (0x80 | 0x01 | (blink_type << 1)), &data, 0);
+}
+
+esp_err_t i2c_ht16k33_turn_on_oscillator(i2c_ht16k33_handle_t ht16k33_handle){
+    uint8_t data = 0x0;
+    return i2c_ht16k33_write(ht16k33_handle, 0x21, &data, 0);
+}
+
+void i2c_ht16k33_buffer_write(uint8_t *buffer, uint16_t character_value, uint8_t row_position)
+{
+    uint8_t tmp_index = row_position * 2;
+    if (row_position < 8){
+        buffer[tmp_index]   =  character_value      & 0xFF;
+        buffer[tmp_index+1] = (character_value >> 8) & 0xFF;
+    }
+}
+
+esp_err_t i2c_ht16k33_update_ram(i2c_ht16k33_handle_t ht16k33_handle, uint8_t* buffer)
+{
+    return i2c_ht16k33_write(ht16k33_handle, 0x00, buffer, 16);
+}

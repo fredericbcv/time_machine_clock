@@ -13,6 +13,7 @@
 #include "i2c_ht16k33.h"
 #include "esp_task_wdt.h"
 #include "esp_check.h"
+#include "esp_random.h"
 
 #include <inttypes.h>
 #include "esp_chip_info.h"
@@ -44,75 +45,19 @@ static void i2c_init(i2c_ht16k33_handle_t *ht16k33_handle){
     ESP_ERROR_CHECK(i2c_ht16k33_init(bus_handle, 0x70, ht16k33_handle));
 
     // Config ht16k33: Turn on System oscillator
-    uint32_t address = 0x21;
-    uint8_t  data    = 0x0;
-    ESP_ERROR_CHECK(i2c_ht16k33_write(*ht16k33_handle, address, &data, 0));
+    ESP_ERROR_CHECK(i2c_ht16k33_turn_on_oscillator(*ht16k33_handle));
 
-    // Config ht16k33: ROW/INT default
-    // Config ht16k33: Dimming default
-    address = 0xE0; // | (uint8_t) brigthness
-    ESP_ERROR_CHECK(i2c_ht16k33_write(*ht16k33_handle, address, &data, 0));
+    // Config ht16k33: Set dimming
+    ESP_ERROR_CHECK(i2c_ht16k33_set_brightness(*ht16k33_handle,0));
 
     // Config ht16k33: Blinking default + display on
-    address = 0x81;
-    ESP_ERROR_CHECK(i2c_ht16k33_write(*ht16k33_handle, address, &data, 0));
-
-    // Display something
-    address = 0x00;
-    uint8_t wdata[16];
-    wdata[0]  = 0x3F;
-
-    // Exterieur
-    // lsb -> A0 - A1
-    //        A1 - A2
-    //        A2 - B
-    //        A3 - C
-    //        A4 - D1
-    //        A5 - D2
-    //        A6 - E
-    // msb -> A7 - F
-
-    wdata[1]  = 0x4A; // Interieur
-
-    // lsb -> A8  - G1
-    //        A9  - G2
-    //        A10 - H
-    //        A11 - J
-    //        A12 - K
-    //        A13 - L
-    //        A14 - M
-    // msb -> A15 - N
-
-    wdata[2]  = 0xC3;
-    wdata[3]  = 0x01;
-
-
-    wdata[4]  = 0;
-    wdata[5]  = 0;
-    wdata[6]  = 0;
-    wdata[7]  = 0;
-    wdata[8]  = 0;
-    wdata[9]  = 0;
-    wdata[10] = 0;
-    wdata[11] = 0;
-    wdata[12] = 0;
-    wdata[13] = 0;
-    wdata[14] = 0;
-    wdata[15] = 0;
-    ESP_ERROR_CHECK(i2c_ht16k33_write(*ht16k33_handle, address, wdata, 16));
-
-    // address = 0x20;
-    // ESP_ERROR_CHECK(i2c_ht16k33_read(*ht16k33_handle, address, &data, 1));
-    // printf("Read 0x%02lx = 0x%02x \n", address, data);
+    ESP_ERROR_CHECK(i2c_ht16k33_set_blinking(*ht16k33_handle,BLINK_OFF));
 }
 
 void app_main(void)
 {
     // Init var
     i2c_ht16k33_handle_t ht16k33_handle;
-    // uint8_t  read_buf[1]  = {0};
-    // uint8_t  write_buf[1] = {0};
-    // uint32_t block_addr = 0x00;
 
     // Watchdog cfg
     // esp_task_wdt_deinit();
@@ -120,68 +65,84 @@ void app_main(void)
     // I2C init
     i2c_init(&ht16k33_handle);
 
-    printf("Hello world, human!\n");
-    // ESP_ERROR_CHECK(i2c_del_master_bus(bus_handle));
+    uint16_t display_char[36] = { \
+        DISPLAY_16_SEGMENT_VAL_A, \
+        DISPLAY_16_SEGMENT_VAL_B, \
+        DISPLAY_16_SEGMENT_VAL_C, \
+        DISPLAY_16_SEGMENT_VAL_D, \
+        DISPLAY_16_SEGMENT_VAL_E, \
+        DISPLAY_16_SEGMENT_VAL_F, \
+        DISPLAY_16_SEGMENT_VAL_G, \
+        DISPLAY_16_SEGMENT_VAL_H, \
+        DISPLAY_16_SEGMENT_VAL_I, \
+        DISPLAY_16_SEGMENT_VAL_J, \
+        DISPLAY_16_SEGMENT_VAL_K, \
+        DISPLAY_16_SEGMENT_VAL_L, \
+        DISPLAY_16_SEGMENT_VAL_M, \
+        DISPLAY_16_SEGMENT_VAL_N, \
+        DISPLAY_16_SEGMENT_VAL_O, \
+        DISPLAY_16_SEGMENT_VAL_P, \
+        DISPLAY_16_SEGMENT_VAL_Q, \
+        DISPLAY_16_SEGMENT_VAL_R, \
+        DISPLAY_16_SEGMENT_VAL_S, \
+        DISPLAY_16_SEGMENT_VAL_T, \
+        DISPLAY_16_SEGMENT_VAL_U, \
+        DISPLAY_16_SEGMENT_VAL_V, \
+        DISPLAY_16_SEGMENT_VAL_W, \
+        DISPLAY_16_SEGMENT_VAL_X, \
+        DISPLAY_16_SEGMENT_VAL_Y, \
+        DISPLAY_16_SEGMENT_VAL_Z, \
+        DISPLAY_16_SEGMENT_VAL_0, \
+        DISPLAY_16_SEGMENT_VAL_1, \
+        DISPLAY_16_SEGMENT_VAL_2, \
+        DISPLAY_16_SEGMENT_VAL_3, \
+        DISPLAY_16_SEGMENT_VAL_4, \
+        DISPLAY_16_SEGMENT_VAL_5, \
+        DISPLAY_16_SEGMENT_VAL_6, \
+        DISPLAY_16_SEGMENT_VAL_7, \
+        DISPLAY_16_SEGMENT_VAL_8, \
+        DISPLAY_16_SEGMENT_VAL_9  \
+    };
+
+    uint8_t  wdata[16];
+    for (int i = 0; i < 8; ++i){
+        i2c_ht16k33_buffer_write(wdata,DISPLAY_16_SEGMENT_VAL_NULL,i);
+    }
 
     // Forever loop
-    // while (1) {
-        // Needs wait for eeprom hardware done, referring from datasheet
-        // i2c_ht16k33_wait_idle(ht16k33_handle);
+    uint8_t time_idx = 0;
+    uint8_t row0_idx = 0;
+    uint8_t row1_idx = 1;
+    while (1) {
+        // Display something
+        i2c_ht16k33_buffer_write(wdata,display_char[row0_idx],0);
+        // i2c_ht16k33_buffer_write(wdata,esp_random() & 0xFFFF,0);
+        i2c_ht16k33_buffer_write(wdata,display_char[row1_idx],1);
+        ESP_ERROR_CHECK(i2c_ht16k33_update_ram(ht16k33_handle,wdata));
+        // delay
+        vTaskDelay(100/portTICK_PERIOD_MS); 
+        time_idx++;
+        printf("time_idx %d\n",time_idx);
 
-        // vTaskDelay(pdMS_TO_TICKS(10));
+        // Update row 0 index
+        row0_idx = esp_random() & 0x3F;
+        if (row0_idx > 35){
+            row0_idx -= 35;
+        }
 
-        // i2c_master_receive(&bus_handle, read_buf, 1, 100);
-
-        // read_buf[0] = 0;
-        // ESP_ERROR_CHECK(i2c_ht16k33_read(ht16k33_handle, block_addr, read_buf, 1));
-        // printf("Read1 0x%02x\n ", read_buf[0]);
-        // i2c_ht16k33_wait_idle(ht16k33_handle);
-
-        // write_buf[0] = 3;
-        // ESP_ERROR_CHECK(i2c_ht16k33_write(ht16k33_handle,block_addr, write_buf, 1));
-
-        // // i2c_ht16k33_wait_idle(ht16k33_handle);
-
-        // printf("Read1 0x%02x\n ", read_buf[0]);
-        // ESP_ERROR_CHECK(i2c_ht16k33_read(ht16k33_handle, block_addr, read_buf, 1));
-        // printf("Read2 0x%02x\n ", read_buf[0]);
-
-    //     vTaskDelay(50);
-    // }
-
-
-
-    // /* Print chip information */
-    // esp_chip_info_t chip_info;
-    // uint32_t flash_size;
-    // esp_chip_info(&chip_info);
-    // printf("This is %s chip with %d CPU core(s), %s%s%s%s, ",
-    //        CONFIG_IDF_TARGET,
-    //        chip_info.cores,
-    //        (chip_info.features & CHIP_FEATURE_WIFI_BGN) ? "WiFi/" : "",
-    //        (chip_info.features & CHIP_FEATURE_BT) ? "BT" : "",
-    //        (chip_info.features & CHIP_FEATURE_BLE) ? "BLE" : "",
-    //        (chip_info.features & CHIP_FEATURE_IEEE802154) ? ", 802.15.4 (Zigbee/Thread)" : "");
-
-    // unsigned major_rev = chip_info.revision / 100;
-    // unsigned minor_rev = chip_info.revision % 100;
-    // printf("silicon revision v%d.%d, ", major_rev, minor_rev);
-    // if(esp_flash_get_size(NULL, &flash_size) != ESP_OK) {
-    //     printf("Get flash size failed");
-    //     return;
-    // }
-
-    // printf("%" PRIu32 "MB %s flash\n", flash_size / (uint32_t)(1024 * 1024),
-    //        (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
-
-    // printf("Minimum free heap size: %" PRIu32 " bytes\n", esp_get_minimum_free_heap_size());
-
-    // for (int i = 10; i >= 0; i--) {
-    //     printf("Restarting in %d seconds...\n", i);
-    //     vTaskDelay(1000 / portTICK_PERIOD_MS);
-    // }
-    // printf("Restarting now.\n");
-    // fflush(stdout);
-    // esp_restart();
-
+        // Update row 1 index (slower)
+        if (time_idx < 5){
+            continue;
+        } else {
+            time_idx = 0;
+        }
+        if (row1_idx < 35){
+            row1_idx++;
+        } else {
+            row1_idx = 0;
+        }
+    }
+    printf("Restarting now.\n");
+    fflush(stdout);
+    esp_restart();
 }
